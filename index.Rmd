@@ -1,0 +1,133 @@
+---
+title: "Scotland"
+subtitle: "COVID-19"
+author: ""
+date: "`r Sys.Date()`"
+output:
+  prettydoc::html_pretty:
+    theme: leonids
+    highlight: github
+---
+> Yet, another dashboard mapping  progress of pandemic in Scotland
+
+## Maps
+
+The maps are created from data published by the Scottish Government
+
+1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
+2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
+# get todays dates and times
+library(dplyr)
+library(tidyr)
+library(lubridate)
+library(readr)
+library(ggplot2)
+library(rvest)
+library(sf)
+library(stringr)
+library(tmap)
+library(kableExtra)
+```
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
+# get today's data
+date= today()
+date_char = as.character.Date(date)
+```
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
+# scrape data from the website into a table
+
+url = xml2::read_html("https://www.gov.scot/coronavirus-covid-19/")
+
+selector_name<-"table"
+
+cases_latest <- html_node(x = url, css = selector_name) %>%
+  html_table(trim = TRUE) %>%
+  mutate(cases = `Positive cases`) %>%
+  rename(HBName = `Health board`,
+         !!date_char := `Positive cases`) %>%
+  mutate(HBName = trimws(as.character(HBName))) %>%
+  mutate(HBName = replace(HBName, str_detect(HBName, "Ayrshire"), "Ayrshire and Arran"))
+
+```
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, include=FALSE}
+# make a join to the Health Boards boundaries
+
+# load  healthboards dataset
+
+hb_shp = st_read("data/SG_NHS_HealthBoards_2019.shp") %>% 
+  select(HBName) %>% 
+  mutate(HBName = trimws(as.character(HBName)))
+
+# join covid table to health board geofraphies
+
+hb_cases = left_join(hb_shp, cases_latest, by = "HBName")
+  #replace(is.na(.), 0)
+
+
+```
+
+```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
+#make a map
+legend_title = paste0("Data from ", date_char)
+map_hb = tm_shape(hb_cases) +
+  tm_polygons( col = "cases", 
+               style = "jenks", 
+               palette = "Reds",
+               title = legend_title,
+               colorNA = "white",
+               textNA = "no cases"
+               ) +
+  tm_layout(frame = FALSE,
+            title = "Positive cases of COVID-19",
+            ) +
+  tm_credits("Source:https://www.gov.scot/coronavirus-covid-19/",
+             position=c("left", "bottom")
+  )
+
+#save map to png
+tmap_save(map_hb, "map_hb.png", dpi = 200)
+
+#bubble map
+map_cases = tm_shape(hb_cases) +
+  tm_borders() +
+  tm_bubbles(col = "cases",
+             n = 6,
+             style = "jenks",
+             palette = "Reds",
+             size = "cases",
+             title.size = "Number of cases",
+             legend.col.show = FALSE,
+             legend.size.show = FALSE,
+             shape = 19) +
+  tm_layout(frame = FALSE,
+  ) +
+  tm_credits("Source:https://www.gov.scot/coronavirus-covid-19/",
+             position=c("left", "bottom")
+  )
+
+tmap_arrange(map_hb, map_cases)
+```
+
+## Interactive Map
+
+```{r echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, paged.print=FALSE}
+#interctive map
+tmap_mode("view")
+map_hb
+```
+
+## Table
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
+
+
+```
+
+## Stay Tuned
+
+
