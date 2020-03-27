@@ -29,6 +29,7 @@ library(sf)
 library(stringr)
 library(tmap)
 library(kableExtra)
+library(gghighlight)
 ```
 
 ```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -71,6 +72,19 @@ hb_cases = left_join(hb_shp, cases_latest, by = "HBName")
 
 ```
 
+```{r eval=FALSE, fig.align='center', message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+# update master table
+
+scotland_cases = read_csv("data/scotland_cases.csv") %>% 
+  left_join(cases_latest, by = "HBName") %>% 
+  select(-cases)
+
+write_csv(scotland_cases, "data/scotland_cases.csv")
+
+
+```
+
+
 ```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
 #make a map
 legend_title = paste0("Data from ", date_char)
@@ -111,6 +125,25 @@ map_cases = tm_shape(hb_cases) +
   )
 
 tmap_arrange(map_hb, map_cases)
+```
+
+## Timeline
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, }
+
+# pivot longer
+scotland_cases = read_csv("data/scotland_cases.csv")
+covid_longer = scotland_cases %>%
+pivot_longer(-HBName, names_to = "Date", values_to = "Cases")  %>%
+mutate(Date = as.Date(Date))
+
+#plot 
+ggplot(covid_longer)+
+ geom_line(aes(x=Date, y=Cases, color = HBName)) +
+ gghighlight(max(Cases) > 100) +
+ scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
+ theme_minimal()
+
 ```
 
 ## Interactive Map
