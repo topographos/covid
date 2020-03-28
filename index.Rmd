@@ -8,14 +8,9 @@ output:
     theme: leonids
     highlight: github
 ---
-> Yet, another dashboard mapping  progress of pandemic in Scotland
+> *Total Cases* 0000 *Deaths* 0000
 
-## Maps
-
-The maps are created from data published by the Scottish Government
-
-1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
-2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
+## Number of Coronavirus cases by NHS Health Board
 
 ```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
 # get todays dates and times
@@ -98,10 +93,7 @@ map_hb = tm_shape(hb_cases) +
                ) +
   tm_layout(frame = FALSE,
             title = "Positive cases of COVID-19",
-            ) +
-  tm_credits("Source:https://www.gov.scot/coronavirus-covid-19/",
-             position=c("left", "bottom")
-  )
+            )
 
 #save map to png
 tmap_save(map_hb, "map_hb.png", dpi = 200)
@@ -119,13 +111,15 @@ map_cases = tm_shape(hb_cases) +
              legend.size.show = FALSE,
              shape = 19) +
   tm_layout(frame = FALSE,
-  ) +
-  tm_credits("Source:https://www.gov.scot/coronavirus-covid-19/",
-             position=c("left", "bottom")
   )
 
 tmap_arrange(map_hb, map_cases)
 ```
+
+The maps are created from data published by the Scottish Government
+
+1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
+2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
 
 ## Timeline
 
@@ -135,14 +129,20 @@ tmap_arrange(map_hb, map_cases)
 scotland_cases = read_csv("data/scotland_cases.csv")
 covid_longer = scotland_cases %>%
 pivot_longer(-HBName, names_to = "Date", values_to = "Cases")  %>%
-mutate(Date = as.Date(Date))
+mutate(Date = as.Date(Date)) %>% 
+replace(is.na(.), 0)
 
+#  set theme
+theme_set(theme_minimal())
 #plot 
 ggplot(covid_longer)+
- geom_line(aes(x=Date, y=Cases, color = HBName)) +
- gghighlight(max(Cases) > 100) +
+ geom_line(aes(x=Date, y=Cases, color = HBName), color='#ba0000') +
+ gghighlight(max(Cases) > 1, use_direct_label = FALSE) +
  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
- theme_minimal()
+ theme(legend.position = "none") +
+ 
+ facet_wrap(~ HBName)
+
 
 ```
 
@@ -152,13 +152,6 @@ ggplot(covid_longer)+
 #interctive map
 tmap_mode("view")
 map_hb
-```
-
-## Table
-
-```{r echo=FALSE, message=FALSE, warning=FALSE, paged.print=FALSE}
-
-
 ```
 
 ## Stay Tuned
