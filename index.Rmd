@@ -154,11 +154,6 @@ map_cases = tm_shape(hb_cases) +
 tmap_arrange(map_hb, map_cases)
 ```
 
-The maps are created from data published by the Scottish Government
-
-1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
-2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
-
 ## Pandemic Growth
 
 ```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, }
@@ -262,5 +257,11 @@ tmap_mode("view")
 map_hb
 ```
 
+## Data
 
+The maps and plot are daily updated using data published by the Scottish Government:
 
+1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
+2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
+
+*"Historical"* cases up to 18th March come from `fantastic` work by [Tom White](http://tom-e-white.com/covid-19-uk-data/) at UK level.
