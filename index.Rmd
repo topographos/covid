@@ -235,7 +235,7 @@ anim_save("covid_anim_plot.gif", covid_anim)
 ```
 
 
-```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
 #daily
 
 scotland_totals %>% filter(new_cases >0 ) %>% 
