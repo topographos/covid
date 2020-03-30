@@ -125,6 +125,21 @@ ggplot(aes(x=date, y=cases_count, color = HBName))+
 scotland_totals = read_csv("https://raw.githubusercontent.com/tomwhite/covid-19-uk-data/master/data/covid-19-totals-scotland.csv")
 
 
+scotland_totals = scotland_totals %>% 
+mutate(new_cases = (ConfirmedCases - lag(ConfirmedCases)))  %>%
+mutate(pct_change = new_cases / lag(ConfirmedCases) * 100) %>%
+mutate(pct_check = (ConfirmedCases/lag(ConfirmedCases) - 1) * 100)
+
+scotland_totals %>% filter(new_cases >0 ) %>% 
+  ggplot()+
+  geom_line(aes(x=Date, y=new_cases), color='#ba0000') +
+  ggtitle("Daily Confirmed Cases")
+  labs(y = "Cases") +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank()) +
+  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
+  scale_linetype('')
+
 #plot 
 covid = ggplot(scotland_totals)+
   geom_line(aes(x=Date, y=Deaths), color='black') +

@@ -172,6 +172,7 @@ theme_set(theme_minimal())
 ggplot(scotland_totals)+
   geom_line(aes(x=Date, y=ConfirmedCases), color='#ba0000') +
   geom_line(aes(x=Date, y=Deaths, lty = 'Deaths'), color='black') +
+  ggtitle("Total Number of Confirmed Cases and Deaths") +
   labs(y = "Cases") +
   scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
   theme(
@@ -197,6 +198,7 @@ theme_set(theme_minimal())
 #plot 
 ggplot(covid_longer)+
  geom_line(aes(x=Date, y=Cases, color = HBName), color='#ba0000') +
+ggtitle("Confirmed Cases by NHS Health Board") +
  gghighlight(max(Cases) > 1, use_direct_label = FALSE) +
  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
  theme(legend.position = "none",
@@ -233,7 +235,22 @@ anim_save("covid_anim_plot.gif", covid_anim)
 ```
 
 
+```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
+#daily
 
+scotland_totals %>% filter(new_cases >0 ) %>% 
+  ggplot()+
+  geom_line(aes(x=Date, y=new_cases, lty = 'Daily Increase'), color='#ba0000') +
+  geom_point(aes(x=Date, y=new_cases), color='#ba0000') +
+  geom_line(aes(x=Date, y=pct_change, lty = 'Percentage Change'), color='black') +
+  geom_point(aes(x=Date, y=pct_change), color='black') +
+  ggtitle("Daily Confirmed Cases") +
+  labs(y = "Number of Cases") +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_blank()) +
+  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
+  scale_linetype('')
+```
 
 
 
@@ -245,6 +262,5 @@ tmap_mode("view")
 map_hb
 ```
 
-## Stay Tuned
 
 
