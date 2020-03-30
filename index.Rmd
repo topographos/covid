@@ -8,7 +8,12 @@ output:
     theme: leonids
     highlight: github
 ---
-> *Total Cases* 0000 *Deaths* 0000
+> <span style="color: #ba0000;">Cases: 0000 </span>  
+   <span style="color: black;">Deaths: 0000 </span> 
+
+```{r, echo=FALSE, out.width= 600, fig.cap="", fig.align='left'}
+knitr::include_graphics("covid_anim_plot.gif")
+```
 
 ## Number of Coronavirus cases by NHS Health Board
 
@@ -25,6 +30,7 @@ library(stringr)
 library(tmap)
 library(kableExtra)
 library(gghighlight)
+library(hrbrthemes)
 ```
 
 ```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
@@ -41,12 +47,14 @@ url = xml2::read_html("https://www.gov.scot/coronavirus-covid-19/")
 selector_name<-"table"
 
 cases_latest <- html_node(x = url, css = selector_name) %>%
-  html_table(trim = TRUE) %>%
+  html_table(trim = TRUE, header = TRUE) %>%
   mutate(cases = `Positive cases`) %>%
+  mutate(cases = as.numeric(cases)) %>% 
   rename(HBName = `Health board`,
          !!date_char := `Positive cases`) %>%
   mutate(HBName = trimws(as.character(HBName))) %>%
   mutate(HBName = replace(HBName, str_detect(HBName, "Ayrshire"), "Ayrshire and Arran"))
+
 
 ```
 
@@ -58,11 +66,14 @@ cases_latest <- html_node(x = url, css = selector_name) %>%
 hb_shp = st_read("data/SG_NHS_HealthBoards_2019.shp") %>% 
   select(HBName) %>% 
   mutate(HBName = trimws(as.character(HBName)))
+  
 
 # join covid table to health board geofraphies
 
 hb_cases = left_join(hb_shp, cases_latest, by = "HBName")
-  #replace(is.na(.), 0)
+
+#st_write(hb_cases, "hb_cases.shp")
+hb_cases = st_read("hb_cases.shp")
 
 
 ```
@@ -70,9 +81,12 @@ hb_cases = left_join(hb_shp, cases_latest, by = "HBName")
 ```{r eval=FALSE, fig.align='center', message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 # update master table
 
+
+
 scotland_cases = read_csv("data/scotland_cases.csv") %>% 
   left_join(cases_latest, by = "HBName") %>% 
   select(-cases)
+
 
 write_csv(scotland_cases, "data/scotland_cases.csv")
 
@@ -81,7 +95,11 @@ write_csv(scotland_cases, "data/scotland_cases.csv")
 
 
 ```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
+
+
+
 #make a map
+tmap_mode("plot")
 legend_title = paste0("Data from ", date_char)
 map_hb = tm_shape(hb_cases) +
   tm_polygons( col = "cases", 
@@ -121,7 +139,29 @@ The maps are created from data published by the Scottish Government
 1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
 2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
 
-## Timeline
+## Pandemic Growth
+
+```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, }
+
+
+scotland_totals = read_csv("data/scotland_totals.csv")
+
+#  set theme
+theme_set(theme_minimal())
+#plot 
+ggplot(scotland_totals)+
+  geom_line(aes(x=Date, y=ConfirmedCases), color='#ba0000') +
+  geom_line(aes(x=Date, y=Deaths, lty = 'Deaths'), color='black') +
+  labs(y = "Cases") +
+  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
+  theme(
+    legend.position = "right",
+    panel.grid.minor = element_blank()) +
+  scale_linetype('')
+
+
+```
+
 
 ```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, }
 
@@ -139,14 +179,19 @@ ggplot(covid_longer)+
  geom_line(aes(x=Date, y=Cases, color = HBName), color='#ba0000') +
  gghighlight(max(Cases) > 1, use_direct_label = FALSE) +
  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
- theme(legend.position = "none") +
- 
+ theme(legend.position = "none",
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank()) +
  facet_wrap(~ HBName)
 
 
 ```
 
-## Interactive Map
+```{r echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, paged.print=FALSE}
+#interctive map
+
+```
+## Interactive
 
 ```{r echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, paged.print=FALSE}
 #interctive map

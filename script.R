@@ -9,6 +9,9 @@ library(rvest)
 library(sf)
 library(stringr)
 library(tmap)
+library(gganimate)
+library(hrbrthemes)
+devtools::install_github("hrbrmstr/hrbrthemes")
 
 # get todays dates and times
 
@@ -27,6 +30,12 @@ new_col_name = paste0(wday, "_", date)
 url = xml2::read_html("https://www.gov.scot/coronavirus-covid-19/")
 
 selector_name<-"table"
+
+scotland_total = html_nodes(x = url, css = "li") %>% 
+  html_text(trim = TRUE) %>% 
+  unlist() 
+
+
 
 cases_latest <- html_node(x = url, css = selector_name) %>%
   html_table(trim = TRUE) %>%
@@ -114,6 +123,23 @@ ggplot(aes(x=date, y=cases_count, color = HBName))+
 # create master table - only once
 
 scotland_totals = read_csv("https://raw.githubusercontent.com/tomwhite/covid-19-uk-data/master/data/covid-19-totals-scotland.csv")
+
+
+#plot 
+covid = ggplot(scotland_totals)+
+  geom_line(aes(x=Date, y=Deaths), color='black') +
+  geom_point(aes(x=Date, y=Deaths), color='black')+
+  geom_line(aes(x=Date, y=ConfirmedCases), color='#ba0000') +
+  geom_point(aes(x=Date, y=ConfirmedCases), color='#ba0000')+
+  labs(y = "Cases") +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major = element_blank()) +
+  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
+  scale_linetype('')
+
+covid_anim = covid + transition_reveal(Date)
+
+anim_save("covid_anim_plot.gif", covid_anim)
 
 scotland_cases = read_csv("https://raw.githubusercontent.com/tomwhite/covid-19-uk-data/master/data/covid-19-cases-uk.csv") %>% 
   filter(Country == "Scotland") %>% 
