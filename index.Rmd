@@ -156,7 +156,7 @@ tmap_arrange(map_hb, map_cases)
 
 ## Pandemic Growth
 
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, }
+```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE, }
 
 
 
@@ -179,7 +179,7 @@ ggplot(scotland_totals)+
 ```
 
 
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, }
+```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE, }
 
 # pivot longer
 scotland_cases = read_csv("data/scotland_cases.csv")
@@ -207,7 +207,7 @@ ggtitle("Confirmed Cases by NHS Health Board") +
 
 
 
-```{r eval=FALSE, fig.align='right', message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
+```{r eval=FALSE, fig.align='left', message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
 #produce animation
 
 covid = ggplot(scotland_totals)+
@@ -230,7 +230,7 @@ anim_save("covid_anim_plot.gif", covid_anim)
 ```
 
 
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
 #daily
 
 scotland_totals %>% filter(new_cases >0 ) %>% 
@@ -251,7 +251,7 @@ scotland_totals %>% filter(new_cases >0 ) %>%
 
 ## Interactive
 
-```{r echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, paged.print=FALSE}
+```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
 #interctive map
 tmap_mode("view")
 map_hb
@@ -264,4 +264,4 @@ The maps and plot are daily updated using data published by the Scottish Governm
 1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
 2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
 
-*'Historical'* cases up to 18th March come from `fantastic` work by [Tom White](http://tom-e-white.com/covid-19-uk-data/) at UK level.^[http://tom-e-white.com/covid-19-uk-data/]
+*'Historical'* cases up to 18th March come from `fantastic` work by [Tom White](http://tom-e-white.com/covid-19-uk-data/) covering UK.^[http://tom-e-white.com/covid-19-uk-data/]
