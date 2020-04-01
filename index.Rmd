@@ -22,6 +22,7 @@ library(tmap)
 library(kableExtra)
 library(gghighlight)
 library(hrbrthemes)
+library(gganimate)
 ```
 
 ```{r echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, paged.print=FALSE, include= FALSE}
