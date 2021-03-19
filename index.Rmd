@@ -1,15 +1,37 @@
 ---
-title: "Scotland"
-subtitle: "COVID-19"
-author: ""
-date: "`r Sys.Date()`"
-output:
-  prettydoc::html_pretty:
-    theme: leonids
-    highlight: github
+title: "COVID-19 analysis and mapping"
+author: "Michal Michalski"
+date: "14/12/2020"
+output: 
+  html_document:
+    theme: flatly
+    highlight: tango
+    code_download: true
+    toc: true
+    toc_float: 
+      collapsed: true
+      smooth_scroll: false
+  
 ---
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
-# get todays dates and times
+<style>
+div.blue { background-color:#D3D3D3; border-radius: 5px; padding: 20px;}
+</style>
+<div class = "blue">
+Some personal and computational notes loosely based on the analytical work I have done in response to COVID-19 pandemic in Scotland.
+In my GIS Analyst role I use wide range of proprietary and open source GIS software as well as tend to blend R and Python languages. 
+Here is a flavor of my work in open and reproducible notebook, following a Donald Knuth's "literate programming" paradigm.
+</div>
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Packages
+
+First,all packages necessary for the analysis.
+```{r packages, echo=TRUE, message=FALSE, warning=FALSE, paged.print=FALSE}
+
 library(dplyr)
 library(tidyr)
 library(lubridate)
@@ -22,247 +44,169 @@ library(tmap)
 library(kableExtra)
 library(gghighlight)
 library(hrbrthemes)
-library(gganimate)
+library(gganimate) # animate plots
+library(geofacet)
+library(zoo) # moving avarages
 ```
 
-```{r echo=FALSE, fig.align='right', message=FALSE, warning=FALSE, paged.print=FALSE, include= FALSE}
-#load total cases for Scotland
-scotland_totals = read_csv("data/scotland_totals.csv")
+## Data Wrangling
 
-scotland_totals = scotland_totals %>% 
-mutate(new_cases = (ConfirmedCases - lag(ConfirmedCases)))  %>% # new daily cases 
-mutate(pct_change = new_cases / lag(ConfirmedCases) * 100) # percentage change
+Now, lets read the data from the *Data Science Scotland* repository
 
-current_cases = scotland_totals %>% 
-  filter(Date == max(Date) ) %>% 
-  select(ConfirmedCases)
-  
-current_deaths = scotland_totals %>% 
-  filter(Date == max(Date) ) %>% 
-  select(Deaths)
-
-```
-
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
-# get today's data
-date= today()
-date_char = as.character.Date(date)
-
-```
-> <span style="color: #ba0000;">Cases: `r current_cases` </span>  <span style="color: black;">Deaths: `r current_deaths` </span> 
-
-```{r, echo=FALSE, out.width= 600, fig.cap="", fig.align='left'}
-knitr::include_graphics("covid_anim_plot.gif")
-```
-
-## Number of Coronavirus cases by NHS Health Board
-
-
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE}
-# scrape data from the website into a table
-
-url = xml2::read_html("https://www.gov.scot/coronavirus-covid-19/")
-
-selector_name<-"table"
-
-cases_latest <- html_node(x = url, css = selector_name) %>%
-  html_table(trim = TRUE, header = TRUE) %>%
-  mutate(cases = `Positive cases`) %>%
-  mutate(cases = as.numeric(cases)) %>% 
-  rename(HBName = `Health board`,
-         !!date_char := `Positive cases`) %>%
-  mutate(HBName = trimws(as.character(HBName))) %>%
-  mutate(HBName = replace(HBName, str_detect(HBName, "Ayrshire"), "Ayrshire and Arran"))
-
-
-```
-
-```{r echo=FALSE, fig.align='center', message=FALSE, warning=FALSE, paged.print=FALSE, include=FALSE}
-# make a join to the Health Boards boundaries
-
-# load  healthboards dataset
-
-hb_shp = st_read("data/SG_NHS_HealthBoards_2019.shp") %>% 
-  select(HBName) %>% 
-  mutate(HBName = trimws(as.character(HBName)))
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+cases_scot = read_csv("https://raw.githubusercontent.com/DataScienceScotland/COVID-19-Management-Information/master/COVID19%20-%20Daily%20Management%20Information%20-%20Scotland%20-%20Testing.csv") %>% 
+  select(Date,'Testing - Cumulative people tested for COVID-19 - Positive') %>% 
+  rename(total = 'Testing - Cumulative people tested for COVID-19 - Positive') %>% 
+  mutate(date = as.Date(Date, "%d-%b-%Y"))
   
 
-# join covid table to health board geofraphies
+# deaths 
+deaths_scot = read_csv("https://raw.githubusercontent.com/DataScienceScotland/COVID-19-Management-Information/master/COVID19%20-%20Daily%20Management%20Information%20-%20Scotland%20-%20Deaths.csv") %>% 
+    rename(total = 'Number of COVID-19 confirmed deaths registered to date') %>% 
+    mutate(date = as.Date(Date, "%d-%b-%Y"))
 
-hb_cases = left_join(hb_shp, cases_latest, by = "HBName")
+```
+
+Since we only have on variable with total cases and deaths, we are going to calculate additional attributes: 
+daily new cases, percentage change and seven days rolling average.
+
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+
+#cases 
+cases_scot  = cases_scot  %>% 
+mutate(new_cases = (total - lag(total)), # new daily cases 
+       pct_change = new_cases / lag(total) * 100, # percentage change
+       cases_07da = rollmean(new_cases, k = 7, fill = NA)) # 7 days rolling average
 
 
-#st_write(hb_cases, "hb_cases.shp", delete_layer = TRUE)
-#hb_cases = st_read("hb_cases.shp")
+
+# deaths
+deaths_scot  = deaths_scot  %>% 
+mutate(new_deaths = (total - lag(total)), # new daily cases 
+      pct_change = new_deaths / lag(total) * 100, # percentage change
+      deaths_07da = rollmean(new_deaths, k = 7, fill = NA)) # 7 days rolling average
 
 
 ```
 
-```{r eval=FALSE, fig.align='center', message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-# update master table
+## Plotting
 
+We are ready to plot our variables using **ggplot** package
 
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 
-scotland_cases = read_csv("data/scotland_cases.csv") %>% 
-  left_join(cases_latest, by = "HBName") %>% 
-  select(-cases)
-
-
-write_csv(scotland_cases, "data/scotland_cases.csv")
-
-
+ggplot()+
+  geom_line(data = cases_scot, aes(x=Date, y=new_cases), color='gray') +
+  geom_line(data = cases_scot, aes(x=Date, y=cases_07da), color='#ba0000') +
+  labs( title = "Scotland's 7 days rolling average COVID-19 cases",
+        subtitle = "Between March 2020 and March 2021", 
+        caption="Source:https://github.com/DataScienceScotland/COVID-19-Management-Information ",
+        y = "Cases", 
+        x = "Month") +
+  scale_x_date(date_breaks = '1 month', date_labels = '%m %y') +
+  scale_y_log10() +
+  hrbrthemes::theme_ipsum()
 ```
 
+## Mapping
 
-```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
+We can also create a map showing latest cases at NHS Health Board level.
+But first we need to get the data for each geograph unit.
 
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
+# load data
+cases_by_hb = read_csv("https://raw.githubusercontent.com/DataScienceScotland/COVID-19-Management-Information/master/COVID19%20-%20Daily%20Management%20Information%20-%20Scottish%20Health%20Boards%20-%20Cumulative%20cases.csv")
 
+# pivot data to long format nd select latest date
+last_cases_by_hb_long = cases_by_hb %>%
+pivot_longer(!Date,names_to = "hb_name", values_to = "cases")  %>%
+mutate(cases = as.numeric(cases)) %>% 
+filter(Date == max(Date))
 
-#make a map
-tmap_mode("plot")
-legend_title = paste0("Data from ", date_char)
-map_hb = tm_shape(hb_cases) +
-  tm_polygons( col = "cases", 
-               n= 5,
-               style = "jenks", 
-               palette = "Reds",
-               title = legend_title,
-               colorNA = "white",
-               textNA = "no cases"
-               ) +
-  tm_layout(frame = FALSE,
-            title = "Positive cases of COVID-19",
-            )
+# load mid 2019 population estimatie
+pop_hb = read_csv("data/hb_pop_2019.csv")
 
-#save map to png
-tmap_save(map_hb, "map_hb.png", dpi = 200)
-
-#bubble map
-map_cases = tm_shape(hb_cases) +
-  tm_borders() +
-  tm_bubbles(col = "cases",
-             n = 5,
-             style = "jenks",
-             palette = "Reds",
-             size = "cases",
-             title.size = "Number of cases",
-             legend.col.show = FALSE,
-             legend.size.show = FALSE,
-             shape = 19) +
-  tm_layout(frame = FALSE,
+# first join: cases with population, also calculate rate per 100k
+cases_by_hb_pop = left_join(last_cases_by_hb_long, pop_hb) %>% 
+  mutate(
+    rate_100k = cases / hb_pop * 100000
   )
 
-tmap_arrange(map_hb, map_cases)
-```
+# load Health Board geographies
+health_boards = st_read("data/SG_NHS_HealthBoards_2019.shp", quiet = TRUE)
 
-## Pandemic Growth
-
-```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE, }
-
-
-
-
-#  set theme
-theme_set(theme_minimal())
-#plot 
-ggplot(scotland_totals)+
-  geom_line(aes(x=Date, y=ConfirmedCases), color='#ba0000') +
-  geom_line(aes(x=Date, y=Deaths, lty = 'Deaths'), color='black') +
-  ggtitle("Total Number of Confirmed Cases and Deaths") +
-  labs(y = "Cases") +
-  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
-  theme(
-    legend.position = "right",
-    panel.grid.minor = element_blank()) +
-  scale_linetype('')
+# second join: health board boundaries 
+cases_hb_rate100k = left_join(health_boards,cases_by_hb_pop, by = c("HBCode" = "hb_code"))
 
 
 ```
 
+Finally, we are ready to produce the map using **tmap** package. 
+Note that we are saving the output to png file.
 
-```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE, }
+```{r}
 
-# pivot longer
-scotland_cases = read_csv("data/scotland_cases.csv")
-covid_longer = scotland_cases %>%
-pivot_longer(-HBName, names_to = "Date", values_to = "Cases")  %>%
-mutate(Date = as.Date(Date)) %>% 
-replace(is.na(.), 0)
+map = tm_shape(cases_hb_rate100k) +
+  tm_polygons(col = "rate_100k",
+              title = "Data from 17th March 2021 \nNumber of confirmed cases per 100,000 people",
+              lwd = 1,
+              border.col = "white",
+              style = "equal",
+              n = 5,
+              palette="cividis" # choose between reds or cividis
+             # legend.format=list(fun=function(x) paste0(formatC(x, digits=0, format="f")))
+              ) +
+  tm_layout(
+           # fontfamily = "arial",
+            title = "Total COVID - 19 cases \nper 100,000 people, by NHS Health Board",
+            title.size = 0.9,
+            legend.title.size = 1,
+            attr.outside= TRUE,
+            attr.outside.position = "bottom",
+            attr.outside.size = .1,
+            attr.just = c("left", "top"),
+            inner.margins = 0.02,
+            outer.margins = c(0,0.01,0.01,0.01),
+            asp = 4/6,
+            frame = F,
+            design.mode = F
+           ) +
+  tm_credits("Cases data from: https://www.gov.scot/coronavirus-covid-19\nPopulation data: NRS Population Estimates, mid-2018\nBoundaries: SpatialData.gov.scot",
+             col = "grey50",
+             position=c("left","top"), 
+             align = "left",
+             size = 0.325)
+# save graphic to png file
+tmap_save(
+  tm = map,
+  filename = "hb_map_cases_rate.png",
+  height = 6,
+  width = 4,
+  units = "in",
+  asp = 4/6
+)
+```
 
-#  set theme
-theme_set(theme_minimal())
-#plot 
-ggplot(covid_longer)+
- geom_line(aes(x=Date, y=Cases, color = HBName), color='#ba0000') +
-ggtitle("Confirmed Cases by NHS Health Board") +
- gghighlight(max(Cases) > 1, use_direct_label = FALSE) +
- scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
- theme(legend.position = "none",
-        panel.grid.minor = element_blank(),
-        panel.grid.major = element_blank()) +
- facet_wrap(~ HBName)
+Ok, map is ready !
 
+```{r, echo=FALSE, out.width= 600, fig.cap="", fig.align='left'}
+knitr::include_graphics("hb_map_cases_rate.png")
+```
 
+I can't recommend **tmap** package enough.
+
+```{r, echo=FALSE, out.width= 600, fig.cap="", fig.align='left'}
+knitr::include_graphics("tmap_anim.gif")
+```
+
+## Session info
+
+```{r}
+sessionInfo()
 ```
 
 
-
-
-```{r eval=FALSE, fig.align='left', message=FALSE, warning=FALSE, include=FALSE, paged.print=FALSE}
-#produce animation
-
-covid = ggplot(scotland_totals)+
-  geom_line(aes(x=Date, y=Deaths), color='black') +
-  geom_point(aes(x=Date, y=Deaths), color='black')+
-  geom_line(aes(x=Date, y=ConfirmedCases), color='#ba0000') +
-  geom_point(aes(x=Date, y=ConfirmedCases), color='#ba0000')+
-  labs(y = "Cases") +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank()) +
-  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
-  scale_linetype('')
-
-covid_anim = covid + transition_reveal(Date)
-
-anim_save("covid_anim_plot.gif", covid_anim)
-
-
-
-```
-
-
-```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
-#daily
-
-scotland_totals %>% filter(new_cases >0 ) %>% 
-  ggplot()+
-  geom_line(aes(x=Date, y=new_cases, lty = 'Daily Increase'), color='#ba0000') +
-  geom_point(aes(x=Date, y=new_cases), color='#ba0000') +
-  geom_line(aes(x=Date, y=pct_change, lty = 'Percentage Change'), color='black') +
-  geom_point(aes(x=Date, y=pct_change), color='black') +
-  ggtitle("Daily Confirmed Cases") +
-  labs(y = "Number of Cases") +
-  theme(panel.grid.minor = element_blank(),
-        panel.grid.major.x = element_blank()) +
-  scale_x_date(date_breaks = '1 week', date_labels = '%m %d') +
-  scale_linetype('')
-```
-
-
-
-## Interactive
-
-```{r echo=FALSE, fig.align='left', message=FALSE, warning=FALSE, paged.print=FALSE}
-#interctive map
-tmap_mode("view")
-map_hb
-```
-
-## Data
-
-The maps and plot are daily updated using data published by the Scottish Government:
-
-1. COVID-19 statistics ^[https://www.gov.scot/coronavirus-covid-19/]
-2. NHS Health Boards ^[https://www.spatialdata.gov.scot/geonetwork/srv/eng/catalog.search#/metadata/f12c3826-4b4b-40e6-bf4f-77b9ed01dc14]
-
-*'Historical'* cases up to 18th March come from `fantastic` work by [Tom White](http://tom-e-white.com/covid-19-uk-data/) covering UK.^[http://tom-e-white.com/covid-19-uk-data/]
+&nbsp;
+<hr />
+<p style="text-align: center;">A work by <a href="https://github.com/topographos/">Michal Michalski</a></p>
+&nbsp;
