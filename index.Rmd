@@ -1,7 +1,7 @@
 ---
 title: "COVID-19 analysis and mapping"
 author: "Michal Michalski"
-date: "14/12/2020"
+date: "01/03/2021"
 output: 
   html_document:
     theme: flatly
@@ -37,16 +37,11 @@ library(tidyr)
 library(lubridate)
 library(readr)
 library(ggplot2)
-library(rvest)
 library(sf)
 library(stringr)
 library(tmap)
-library(kableExtra)
-library(gghighlight)
 library(hrbrthemes)
-library(gganimate) # animate plots
-library(geofacet)
-library(zoo) # moving avarages
+library(zoo)
 ```
 
 ## Data Wrangling
@@ -144,7 +139,7 @@ cases_hb_rate100k = left_join(health_boards,cases_by_hb_pop, by = c("HBCode" = "
 Finally, we are ready to produce the map using **tmap** package. 
 Note that we are saving the output to png file.
 
-```{r}
+```{r message=FALSE, warning=FALSE, paged.print=FALSE}
 
 map = tm_shape(cases_hb_rate100k) +
   tm_polygons(col = "rate_100k",
@@ -171,7 +166,9 @@ map = tm_shape(cases_hb_rate100k) +
             frame = F,
             design.mode = F
            ) +
-  tm_credits("Cases data from: https://www.gov.scot/coronavirus-covid-19\nPopulation data: NRS Population Estimates, mid-2018\nBoundaries: SpatialData.gov.scot",
+  tm_credits("Cases data from: https://www.gov.scot/coronavirus-covid-19\n
+             Population data: NRS Population Estimates, mid-2018\n
+             Boundaries: SpatialData.gov.scot",
              col = "grey50",
              position=c("left","top"), 
              align = "left",
@@ -190,13 +187,13 @@ tmap_save(
 Ok, map is ready !
 
 ```{r, echo=FALSE, out.width= 600, fig.cap="", fig.align='left'}
-knitr::include_graphics("hb_map_cases_rate.png")
+knitr::include_graphics("output/hb_map_cases_rate.png")
 ```
 
 I can't recommend **tmap** package enough.
 
 ```{r, echo=FALSE, out.width= 600, fig.cap="", fig.align='left'}
-knitr::include_graphics("tmap_anim.gif")
+knitr::include_graphics("output/tmap_anim.gif")
 ```
 
 ## Session info
